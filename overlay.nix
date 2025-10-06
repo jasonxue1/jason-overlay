@@ -1,12 +1,15 @@
-final: _: let
-  mkDarwinPackage = name: path:
-    if final.stdenv.isDarwin
-    then final.callPackage path {}
-    else builtins.throw "${name} is only available on macOS.";
-in {
-  jason = {
-    clash-verge-rev = mkDarwinPackage "clash-verge-rev" ./pkgs/clash-verge-rev;
+final: prev: let
+  inherit (final) lib;
+
+  commonPackages = {
+    nix-olde = final.callPackage ./pkgs/nix-olde {};
   };
 
-  clash-verge-rev = final.jason.clash-verge-rev;
+  darwinPackages = lib.optionalAttrs final.stdenv.isDarwin {
+    clash-verge-rev = final.callPackage ./pkgs/clash-verge-rev {};
+  };
+
+  packages = commonPackages // darwinPackages;
+in {
+  jason = packages;
 }

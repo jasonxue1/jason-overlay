@@ -1,26 +1,33 @@
 {
   description = "Jason's personal Nix overlay";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
   outputs = {nixpkgs, ...}: let
+    inherit (nixpkgs) lib;
+    overlay = import ./overlay.nix;
+    perSystem = system: let
+      result = builtins.tryEval (let
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [overlay];
+          config.allowUnfree = true;
+        };
+      in
+        pkgs.jason);
+    in
+      if result.success
+      then result.value
+      else {};
     systems = [
+      "x86_64-linux"
+      "aarch64-linux"
       "x86_64-darwin"
       "aarch64-darwin"
     ];
-    forAllSystems = nixpkgs.lib.genAttrs systems;
-    overlay = import ./overlay.nix;
   in {
     overlays.default = overlay;
 
-    packages = forAllSystems (system: let
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [overlay];
-      };
-    in {
-      clash-verge-rev = pkgs.jason.clash-verge-rev;
-      karabiner-elements = pkgs.jason.karabiner-elements;
-    });
+    packages = lib.genAttrs systems perSystem;
   };
 }
